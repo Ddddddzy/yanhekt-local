@@ -1,0 +1,7 @@
+output/
+auth.txt
+config.json
+ffmpeg.exe
+ffmpeg.zip
+__pycache__/
+*.part
