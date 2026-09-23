@@ -92,7 +92,7 @@ PAGE = r"""<!doctype html>
   .hint{font-size:12px;color:#888;margin-top:8px}
 </style></head><body>
 <div id="side">
-  <h3>课时列表 <button id="btnSet">⚙ 目录</button></h3>
+  <h3>课时列表 <span><button id="btnSort">⇅ 周序</button> <button id="btnSet">⚙ 目录</button></span></h3>
   <div id="list"></div>
 </div>
 <div id="main">
@@ -137,7 +137,15 @@ const vga = document.getElementById('vvga'), cam = document.getElementById('vcam
 const boxVga = document.getElementById('boxVga'), boxCam = document.getElementById('boxCam');
 const bar = document.getElementById('bar'), timeEl = document.getElementById('time');
 const playBtn = document.getElementById('play'), audioSel = document.getElementById('audio'), rateSel = document.getElementById('rate');
-let master = cam, seeking = false;
+let master = cam, seeking = false, sortAsc = true;
+// 自然排序：提取「第N周」等数字按数值比，兜底 localeCompare numeric
+const coll = new Intl.Collator('zh-Hans-CN', {numeric: true, sensitivity: 'base'});
+function weekOf(n){ const m = n.match(/第\s*(\d+)\s*[周节课]/); return m ? parseInt(m[1]) : null; }
+function cmpName(a, b){
+  const wa = weekOf(a.name), wb = weekOf(b.name);
+  if (wa !== null && wb !== null && wa !== wb) return wa - wb;
+  return coll.compare(a.name, b.name);
+}
 
 function fmt(s){ if(!isFinite(s)) s=0; s=Math.floor(s); return Math.floor(s/3600)?Math.floor(s/3600)+':'+String(Math.floor(s/60)%60).padStart(2,'0')+':'+String(s%60).padStart(2,'0'):Math.floor(s/60)+':'+String(s%60).padStart(2,'0'); }
 function dur(){ return Math.max(vga.duration||0, cam.duration||0); }
@@ -196,7 +204,7 @@ function loadList(){
       h.innerHTML = '▾ ' + g.course + `<span class="cnt">${g.items.length}节</span>`;
       const items = document.createElement('div'); items.className='items';
       h.onclick = ()=>{ const hid=items.style.display==='none'; items.style.display=hid?'':'none'; h.innerHTML=(hid?'▾ ':'▸ ')+g.course+`<span class="cnt">${g.items.length}节</span>`; };
-      g.items.forEach(p=>{
+      g.items.slice().sort((a,b)=>sortAsc?cmpName(a,b):cmpName(b,a)).forEach(p=>{
         const d = document.createElement('div'); d.className='item';
         d.innerHTML = p.name + `<div class="sub">${p.vga?'🖥 屏幕':''}${p.cam?' 📷 教室':''}${p.miss?' ⚠缺'+p.miss:''}</div>`;
         d.onclick = ()=>{
@@ -217,6 +225,11 @@ function loadList(){
 
 // ---- 目录设置 ----
 const setEl = document.getElementById('settings');
+document.getElementById('btnSort').onclick = ()=>{
+  sortAsc = !sortAsc;
+  document.getElementById('btnSort').textContent = sortAsc ? '⇅ 周序↑' : '⇅ 周序↓';
+  loadList();
+};
 document.getElementById('btnSet').onclick = ()=>{ setEl.style.display='flex'; renderRoots(); };
 document.getElementById('closeset').onclick = ()=>{ setEl.style.display='none'; loadList(); };
 function renderRoots(){
