@@ -38,7 +38,7 @@ https://www.yanhekt.cn/course/64333
 JSON.parse(localStorage.auth).token
 ```
 
-把输出（不含外层引号）写入脚本旁的 `auth.txt`，或用 `--auth` 参数 / `YANHEKT_AUTH` 环境变量传入。token 过期后重新取一次即可。
+把控制台输出的那串字符（**不含外层引号**）粘贴保存到 `yanhekt.py` **同目录下新建的 `auth.txt`** 文件里即可；也可以用 `--auth` 参数或 `YANHEKT_AUTH` 环境变量传入。token 过期后重新取一次即可。
 
 ### `player.py` — 双屏同步播放器
 
