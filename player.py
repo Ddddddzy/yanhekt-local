@@ -366,15 +366,30 @@ class H(BaseHTTPRequestHandler):
         self.send_header("Content-Range", f"bytes {start}-{end}/{size}")
         self.send_header("Content-Length", str(end - start + 1))
         self.end_headers()
-        with open(fp, "rb") as f:
-            f.seek(start)
-            remain = end - start + 1
-            while remain > 0:
-                chunk = f.read(min(1024 * 1024, remain))
-                if not chunk:
-                    break
-                self.wfile.write(chunk)
-                remain -= len(chunk)
+        try:
+            with open(fp, "rb") as f:
+                f.seek(start)
+                remain = end - start + 1
+                while remain > 0:
+                    chunk = f.read(min(1024 * 1024, remain))
+                    if not chunk:
+                        break
+                    self.wfile.write(chunk)
+                    remain -= len(chunk)
+        except (ConnectionAbortedError, ConnectionResetError, BrokenPipeError, TimeoutError, OSError):
+            # 浏览器 seek / 切课时 / 关页面会主动断开连接，属正常现象，静默结束本次请求
+            self.close_connection = True
+
+
+class Server(ThreadingHTTPServer):
+    daemon_threads = True
+
+    def handle_error(self, request, client_address):
+        # 客户端中断请求（浏览器 seek/切课/关页面）刷屏的 traceback 一律静默
+        exc = sys.exc_info()[1]
+        if isinstance(exc, (ConnectionAbortedError, ConnectionResetError, BrokenPipeError, TimeoutError, OSError)):
+            return
+        super().handle_error(request, client_address)
 
 
 if __name__ == "__main__":
@@ -382,4 +397,4 @@ if __name__ == "__main__":
     for r in CFG["roots"]:
         print("  -", r)
     print(f"播放器：http://127.0.0.1:{CFG['port']}")
-    ThreadingHTTPServer(("127.0.0.1", CFG["port"]), H).serve_forever()
+    Server(("127.0.0.1", CFG["port"]), H).serve_forever()
